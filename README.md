@@ -1,129 +1,141 @@
 # GCLOUD - Dólar
 
-Tema para o [xfce4-screensaver](https://docs.xfce.org/apps/xfce4-screensaver/start): um painel com a
-cotação do dólar, o Ibovespa e a previsão do tempo da sua cidade, sobre uma rede de partículas animada.
+Um tema para o [xfce4-screensaver](https://docs.xfce.org/apps/xfce4-screensaver/start) que mostra o
+dólar, o Ibovespa e a previsão do tempo da sua cidade, sobre uma rede de partículas.
 
 ![Painel com dólar, Ibovespa e previsão do tempo](docs/screenshot.png)
 
-- Dólar comercial e Ibovespa, com a variação do dia e o gráfico dos últimos 30 pregões.
-- Gráfico verde em alta e vermelho em queda, com brilho e o ponto de agora em destaque.
-- Previsão do tempo da cidade detectada pela conexão (ou de uma cidade fixa).
-- Sem chave de API, sem conta e sem dependências além de GTK 3 e Python 3.
-- O screensaver não acessa a rede: um coletor separado atualiza os dados a cada 30 minutos.
+- Dólar e Ibovespa com a variação do dia e o gráfico dos últimos 30 pregões.
+- Previsão do tempo da cidade onde você está.
+- Leve: cerca de 15% de um núcleo em três monitores. Na bateria, reduz o ritmo sozinho.
+- Sem conta e sem chave de API.
 
-## Requisitos
+## Instalar
 
-- XFCE com o `xfce4-screensaver`, em sessão X11 (veja [Limitações](#limitações)).
-- systemd de usuário, para o timer do coletor.
-- Testado no Ubuntu 26.04 com o xfce4-screensaver 4.20.1.
+Precisa de XFCE com `xfce4-screensaver` em sessão X11.
 
-## Como funciona
-
-- `gcloud-dolar-fetch` grava `~/.cache/gcloud-dolar/dolar.ini`, com três seções independentes:
-  - dólar: AwesomeAPI (comercial); se falhar, Banco Central (PTAX de venda);
-  - Ibovespa: Yahoo Finance (`^BVSP`); se falhar, HG Brasil (sem histórico). As duas fontes têm atraso de alguns minutos;
-  - tempo: Open-Meteo, na cidade detectada pelo IP da conexão (ipapi.co; se falhar, ipwho.is).
-
-  Se uma seção falhar, a versão antiga dela fica como está.
-- Um timer do systemd (de usuário) roda o coletor 30 segundos após o login e depois a cada 30 minutos.
-- `gcloud-dolar` é o screensaver. Não acessa a rede: relê o arquivo a cada 30 segundos.
-  Se a última coleta bem-sucedida tiver mais de 3 horas, escreve "desatualizado" abaixo do valor
-  (e a previsão do tempo some).
-
-## Dependências
-
-Debian, Ubuntu, Mint:
-
-    sudo apt install build-essential pkg-config libgtk-3-dev python3
-
-Fedora:
-
-    sudo dnf install gcc make pkgconf-pkg-config gtk3-devel python3
-
-## Instalação
+    # Debian, Ubuntu, Mint
+    sudo apt install build-essential pkg-config libgtk-3-dev libgl-dev python3
+    # Fedora
+    sudo dnf install gcc make pkgconf-pkg-config gtk3-devel mesa-libGL-devel python3
 
     ./install.sh
 
-O script pede `sudo` uma vez (ou abre a janela de senha do `pkexec`, se não houver terminal),
-para copiar o tema no diretório de temas do sistema, por exemplo `/usr/libexec/xfce4-screensaver`.
-O xfce4-screensaver só executa temas que estejam nos diretórios de sistema dele;
-se o `Exec=` do `.desktop` apontar para outro lugar (por exemplo `~/.local/bin`),
-o tema aparece na lista, mas a tela fica preta. O resto vai para o seu usuário.
+Depois escolha "GCLOUD - Dólar" em `xfce4-screensaver-preferences`. Para remover: `./uninstall.sh`.
 
-Depois abra `xfce4-screensaver-preferences` e escolha "GCLOUD - Dólar".
+O instalador pede a senha uma vez, para copiar um único arquivo: o xfce4-screensaver só
+executa temas que estejam no diretório de sistema dele. Fora de lá o tema aparece na lista,
+mas a tela fica preta. Todo o resto vai para a sua pasta de usuário.
 
-## Testes
+## Como funciona
 
-    ~/.local/bin/gcloud-dolar                      # abre numa janela
-    ~/.local/bin/gcloud-dolar --snapshot t.png     # grava um quadro em PNG
-    ~/.local/bin/gcloud-dolar-fetch                # coleta agora
-    systemctl --user list-timers gcloud-dolar.timer
-    journalctl --user -u gcloud-dolar.service      # histórico das coletas
+São dois programas. O **coletor** (`gcloud-dolar-fetch`, Python) busca os dados a cada 30
+minutos, por um timer do systemd, e grava em `~/.cache/gcloud-dolar/dolar.ini`. O **tema**
+(`gcloud-dolar`, C) só lê esse arquivo e desenha. Ele nunca acessa a rede.
 
-Para ver o aviso "desatualizado", edite `atualizado_em` no arquivo de cache para um
-horário com mais de 3 horas (é um timestamp Unix).
+Se uma fonte falhar, vale o último valor salvo. Passadas 3 horas sem atualização, o valor
+ganha o aviso "desatualizado" e a previsão do tempo some.
 
-## Fontes de dados e privacidade
+## Cidade
 
-Todas as fontes são públicas e sem chave. Nenhuma tem garantia de disponibilidade, e a do
-Yahoo Finance não é uma API oficial; por isso cada dado tem uma fonte reserva.
+A cidade vem do IP da sua conexão, o que pode errar com VPN. Para fixar:
 
-| Dado | Fonte principal | Reserva |
+    mkdir -p ~/.config/gcloud-dolar
+    echo "Joinville, SC" > ~/.config/gcloud-dolar/cidade
+
+## Como ler o gráfico
+
+- A linha são os últimos pregões e termina no valor de agora.
+- Verde se o período fechou acima de onde começou, vermelha se fechou abaixo. A linha
+  pontilhada marca esse ponto de partida.
+- A variação "hoje", abaixo do valor, é outra conta e pode ter sinal diferente.
+- Mercado parado aparece como linha quase reta: a escala nunca amplia uma oscilação menor
+  que 3% do valor.
+
+## Fontes e privacidade
+
+| Dado | Fonte | Reserva |
 | --- | --- | --- |
 | Dólar | [AwesomeAPI](https://docs.awesomeapi.com.br/api-de-moedas) | [Banco Central (PTAX)](https://dadosabertos.bcb.gov.br/dataset/dolar-americano-usd-todos-os-boletins-diarios) |
 | Ibovespa | Yahoo Finance (`^BVSP`) | [HG Brasil](https://hgbrasil.com/status/finance) |
 | Localização | [ipapi.co](https://ipapi.co) | [ipwho.is](https://ipwho.is) |
 | Previsão do tempo | [Open-Meteo](https://open-meteo.com) | |
 
-O coletor não envia nenhum dado seu além do que toda requisição HTTP carrega: o endereço IP.
-É por ele que os serviços de localização descobrem a cidade. Se preferir não usar esses
-serviços, fixe a cidade (abaixo): aí o coletor não os consulta.
+São serviços públicos, sem garantia, e o do Yahoo não é oficial. As cotações têm alguns
+minutos de atraso: servem para acompanhar, não para operar.
 
-Os valores são informativos e podem ter atraso. Não use para operar.
+O único dado seu que sai da máquina é o endereço IP, como em qualquer requisição. Fixando a
+cidade, os serviços de localização deixam de ser consultados.
 
-## Como ler o gráfico
+## Desempenho
 
-- A linha são os últimos pregões (a legenda diz quantos) e termina no ponto de agora.
-- A cor é a do período mostrado: verde se o último ponto está acima do primeiro, vermelha se
-  está abaixo. O percentual da legenda é essa mesma conta. A variação "hoje", logo abaixo do
-  valor, tem cor própria e pode ter sinal diferente do gráfico.
-- A linha pontilhada é o nível em que o período começou.
-- A altura do gráfico cobre no mínimo 3% do valor (`CHART_MIN_SPAN`): um mercado parado
-  aparece como uma linha quase reta, e não como um sobe-e-desce ampliado.
+A primeira versão gastava mais de um núcleo inteiro em três monitores. Chegar a 15% levou
+quatro rodadas, sempre medindo antes de mexer:
 
-## Cidade da previsão do tempo
+| Etapa | CPU (de um núcleo) |
+| --- | --- |
+| Primeira versão: tudo redesenhado 30 vezes por segundo | 113% |
+| Painel guardado em cache; rede de partículas rasterizada pelo próprio tema | 60% |
+| Animação medida em tempo, memória reaproveitada entre quadros | 43% |
+| Desenho por OpenGL | 15% |
 
-Por padrão a cidade vem do IP da conexão, que pode errar (VPN, provedor de outra cidade).
-Para fixar:
+Medido num Core i5-1335U com três monitores e o compositor do xfwm4 ligado.
 
-    mkdir -p ~/.config/gcloud-dolar
-    echo "Joinville, SC" > ~/.config/gcloud-dolar/cidade
-    ~/.local/bin/gcloud-dolar-fetch
+A surpresa foi onde estava o custo. O tema em si sempre gastou pouco; quem sofria era o
+servidor X, compondo cada quadro. Com OpenGL esse trabalho vai para a placa de vídeo. O
+preço é memória: uns 90 MB por monitor, contra 32 MB do desenho por GTK e cairo, que
+continua no programa como reserva para quando não houver OpenGL.
 
-O texto do arquivo é o que aparece na tela; a busca usa o que vem antes da vírgula, só no Brasil.
-Apague o arquivo para voltar à detecção automática.
+Na tomada o tema roda a 30 quadros por segundo; com a bateria descarregando, cai para 10,
+o que corta o consumo para menos da metade.
 
-## Personalização
+Três ideias foram testadas e descartadas por não se pagarem: repintar só os trechos da tela
+que mudam, sincronizar os quadros entre monitores e trocar o GTK por Xlib puro.
 
-No topo de `gcloud-dolar.c`: cores do fundo e da rede (`BG_*`, `AC_*`), cores de alta e queda (`UP_*`, `DN_*`),
-limite de desatualização (`STALE_SECONDS`). Recompile com `make` e rode `./install.sh`.
+## Cuidados
 
-O intervalo de coleta fica em `systemd/gcloud-dolar.timer` (`OnUnitActiveSec`).
+O tema lê um arquivo que pode estar corrompido e passa horas rodando, então duas coisas
+foram verificadas a sério: entrada ruim e memória.
+
+- **Entrada ruim.** `make check` roda o tema 52 vezes sob AddressSanitizer e UBSan, com
+  arquivos vazios, truncados, com `nan`, `inf`, textos enormes e datas absurdas, em quatro
+  tamanhos de tela. Nenhum acesso inválido. Valores fora do razoável são ignorados em vez
+  de quebrar o desenho.
+- **Memória.** Rodando com o arquivo trocado a cada segundo, o uso não cresce. Sobra uma
+  alocação de cerca de 1 KB, feita uma vez pelas bibliotecas de fontes.
+- **Coletor.** Confere a faixa dos valores antes de gravar e troca o arquivo de uma vez,
+  para o tema nunca ler pela metade.
+- **Encerramento.** O tema sai limpo quando o screensaver o encerra.
+
+O que ainda não foi testado: outras distribuições, placas de vídeo que não sejam Intel e a
+troca para bateria num notebook de verdade fora da tomada (só simulada).
+
+## Testar
+
+    ~/.local/bin/gcloud-dolar                     # abre numa janela
+    ~/.local/bin/gcloud-dolar --snapshot t.png    # grava um quadro
+    ~/.local/bin/gcloud-dolar-fetch               # coleta agora
+    journalctl --user -u gcloud-dolar.service     # histórico das coletas
+    make check                                    # bateria de testes de memória
+
+| Variável | Efeito |
+| --- | --- |
+| `GCLOUD_DOLAR_CACHE` | outro arquivo de dados |
+| `GCLOUD_DOLAR_FPS` | quadros por segundo fixos |
+| `GCLOUD_DOLAR_RENDER` | `gl` ou `gtk`, para forçar um dos desenhos |
+| `GCLOUD_DOLAR_POWER_DIR` | diretório no lugar de `/sys/class/power_supply`, para simular bateria |
+
+## Personalizar
+
+No topo de `gcloud-dolar.c` ficam as cores (`BG_*`, `AC_*`, `UP_*`, `DN_*`), o prazo de
+desatualização (`STALE_SECONDS`) e os quadros por segundo (`FPS_AC`, `FPS_BATTERY`). Depois
+de mudar, rode `./install.sh` de novo. O intervalo de coleta está em
+`systemd/gcloud-dolar.timer`.
 
 ## Limitações
 
-- Só sessão X11. O xfce4-screensaver atual embute os temas com `GtkPlug` no X11;
-  no Wayland ele usa outra biblioteca (libwlembed), ainda não suportada aqui.
-- A variação do dólar é a informada pela fonte (AwesomeAPI) ou a diferença
-  para a PTAX anterior (Banco Central). A do Ibovespa é sobre o fechamento anterior.
-- A previsão é só a do dia (temperatura atual, máxima, mínima e chance de chuva).
-
-## Desinstalar
-
-    ./uninstall.sh
-
-Remove os programas, o tema, o timer e o cache. A cidade fixada, se houver, fica em
-`~/.config/gcloud-dolar/cidade`.
+- Só X11. No Wayland o xfce4-screensaver embute os temas de outro jeito, ainda não suportado.
+- A previsão é só a do dia.
 
 ## Licença
 

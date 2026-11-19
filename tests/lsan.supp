@@ -1,0 +1,3 @@
+# O fontconfig guarda para sempre o que le da configuracao de fontes do sistema.
+# E uma alocacao unica, feita dentro da biblioteca; nao cresce com o tempo.
+leak:libfontconfig

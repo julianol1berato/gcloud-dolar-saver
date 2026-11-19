@@ -1,4 +1,5 @@
 # binário compilado
 /gcloud-dolar
+/gcloud-dolar-asan
 *.o
 __pycache__/

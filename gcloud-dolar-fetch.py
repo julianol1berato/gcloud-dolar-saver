@@ -233,9 +233,17 @@ def write_cache(dados):
         linhas.append("")
     # grava em arquivo temporario e renomeia: o screensaver nunca le pela metade
     fd, tmp = tempfile.mkstemp(dir=CACHE_DIR, prefix=".dolar-")
-    with os.fdopen(fd, "w", encoding="utf-8") as fh:
-        fh.write("\n".join(linhas))
-    os.replace(tmp, CACHE_FILE)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(linhas))
+        os.replace(tmp, CACHE_FILE)
+    except BaseException:
+        # disco cheio, sinal no meio da escrita...: nao deixa o temporario para tras
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 SECOES = (
