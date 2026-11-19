@@ -1,0 +1,10 @@
+[Unit]
+Description=Atualiza a cotacao do dolar a cada 30 minutos
+
+[Timer]
+OnStartupSec=30s
+OnUnitActiveSec=30min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

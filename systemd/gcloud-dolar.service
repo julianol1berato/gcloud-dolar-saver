@@ -1,0 +1,7 @@
+[Unit]
+Description=Coleta a cotacao do dolar para o screensaver GCLOUD
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/gcloud-dolar-fetch

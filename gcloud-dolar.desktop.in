@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=GCLOUD - Dólar
+Comment=Dólar, Ibovespa e previsão do tempo sobre uma rede de partículas
+Exec=@SAVERDIR@/gcloud-dolar
+TryExec=@SAVERDIR@/gcloud-dolar
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=Screensaver;
+OnlyShowIn=XFCE;
+Hidden=true
